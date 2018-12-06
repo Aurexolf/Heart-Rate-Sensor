@@ -1,57 +1,17 @@
 #include "Arduino.h"
 #include <Math.h>
 
-const byte lowHeart = 40;
-const int highHeart = 200;
-const int16_t sampleFreq = 1800;
+const uint16_t BUFFER_SIZE = 75;
+const float lowHeart = 40.0/60.0;
+const float highHeart = 200.0/60.0;
+const int16_t sampleFreq = 25;
 
-void calculate_heart(int16_t *irBuffer, const byte buffLength, double *heartRate, byte *validHeartRate);
+void calculate_heart(int16_t *irBuffer, double *heartRate, boolean *validHeartRate);
 
-double autocorr(int16_t *sample, int8_t len, float sampleFreq);
+void calculate_SPO2(int16_t *irBuffer, int16_t *redBuffer, int16_t spo2, boolean validSPO2);
 
+float checkCorrellation(int16_t *irBuffer, int16_t *redBuffer);
 
-void calculate_heart(int16_t *irBuffer, const byte buffLength, double *heartRate, byte *validHeartRate){
-  //Variables
-  int32_t sum = 0, highSum = 0;
-  int16_t colourBuffer[buffLength];
-  int16_t avg, period = 0;
-  int16_t thresh = 0;
-  int8_t i, k;
-  
-  //Calculate DC average
-  for(i = 0; i < buffLength; i++){
-    avg += irBuffer[i];
-  }
+float rf_rms(float *pn_x, int32_t n_size, float *sumsq);
 
-  avg /= buffLength;
-
-  for(i = 0; i < buffLength; i++){
-    colourBuffer[i] = irBuffer[i] - avg;
-    thresh = max(thresh, colourBuffer[i]);
-  }
-
-  thresh /= 2;
-  
-  // sampleFreq/highHeart = smallest period we want to measure and sampleFreq/lowHeart = the highest
-  for (int i = sampleFreq/highHeart; i < (int) sampleFreq/lowHeart; i++)
-  {
-    sum = 0;
-    
-
-        for (k=0; k <buffLength-i; k++)
-   {
-     sum += (colourBuffer[k]) * (colourBuffer[k+i]);
-   }
-   sum /= k ;
-    
-   if(sum > thresh && sum > highSum){
-    period = i;
-    highSum = sum;
-   }
-    
-  }
-  *validHeartRate = period ? 1:0;
-  *heartRate = (double) sampleFreq/period;
-   
-  return;
-}
+float rf_Pcorrelation(float *pn_x, float *pn_y, int32_t n_size);
